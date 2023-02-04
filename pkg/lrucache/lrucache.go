@@ -6,11 +6,13 @@ var (
 	ErrKeyNotFound = errors.New("key not found")
 )
 
+// LRUCache - least recently used cache.
+// Cache keeps most recently used keys,
+// but least recently used can be evicted.
 type LRUCache[K comparable, V comparable] struct {
 	capacity int
 	cache    map[K]V
 	usages   map[K]uint
-	oldest   K
 }
 
 func NewLRUCache[K comparable, V comparable](capacity int) *LRUCache[K, V] {
@@ -53,7 +55,7 @@ func (c *LRUCache[K, V]) Clear() {
 	c.usages = make(map[K]uint, c.capacity)
 }
 
-// TODO: How to speedup eviction of least frequently used keys?
+// TODO: How to speedup eviction of least recently used keys?
 func (c *LRUCache[K, V]) evict() {
 	var oldest = c.firstUsageKey()
 	for k, n := range c.usages {
