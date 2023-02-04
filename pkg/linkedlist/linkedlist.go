@@ -61,9 +61,6 @@ func (l *LinkedList[T]) removeItem(item *Item[T]) (T, error) {
 	if item == nil {
 		return *new(T), ErrInvalidItem
 	}
-	defer func() {
-		l.len--
-	}()
 	if item == l.head {
 		l.head = item.next
 	}
@@ -75,6 +72,7 @@ func (l *LinkedList[T]) removeItem(item *Item[T]) (T, error) {
 	} else {
 		item.prev.next = item.next
 	}
+	l.len--
 	return item.val, nil
 }
 
