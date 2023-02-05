@@ -10,13 +10,13 @@ var (
 // LRUCache - least recently used cache.
 // Cache keeps most recently used keys,
 // but least recently used can be evicted.
-type LRUCache[K comparable, V comparable] struct {
+type LRUCache[K comparable, V any] struct {
 	capacity uint
 	cache    map[K]V
 	usages   map[K]uint
 }
 
-func NewLRUCache[K comparable, V comparable](capacity uint) (*LRUCache[K, V], error) {
+func NewLRUCache[K comparable, V any](capacity uint) (*LRUCache[K, V], error) {
 	if capacity == 0 {
 		return nil, ErrInvalidCapacity
 	}
