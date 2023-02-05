@@ -49,5 +49,8 @@ func (s *FreqStack[T]) Pop() (T, error) {
 		s.maxFreq--
 	}
 	s.freqs[val]--
+	if s.freqs[val] == 0 {
+		delete(s.freqs, val)
+	}
 	return val, nil
 }
