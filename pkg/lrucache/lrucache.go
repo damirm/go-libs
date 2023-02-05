@@ -3,27 +3,28 @@ package lrucache
 import "errors"
 
 var (
-	ErrKeyNotFound = errors.New("key not found")
+	ErrKeyNotFound     = errors.New("key not found")
+	ErrInvalidCapacity = errors.New("capacity must be > 1")
 )
 
 // LRUCache - least recently used cache.
 // Cache keeps most recently used keys,
 // but least recently used can be evicted.
 type LRUCache[K comparable, V comparable] struct {
-	capacity int
+	capacity uint
 	cache    map[K]V
 	usages   map[K]uint
 }
 
-func NewLRUCache[K comparable, V comparable](capacity int) *LRUCache[K, V] {
-	if capacity < 1 {
-		capacity = 1
+func NewLRUCache[K comparable, V comparable](capacity uint) (*LRUCache[K, V], error) {
+	if capacity == 0 {
+		return nil, ErrInvalidCapacity
 	}
 	return &LRUCache[K, V]{
 		capacity: capacity,
 		cache:    make(map[K]V, capacity),
 		usages:   make(map[K]uint, capacity),
-	}
+	}, nil
 }
 
 var nowCounter uint
@@ -34,7 +35,7 @@ func now() uint {
 }
 
 func (c *LRUCache[K, V]) Put(key K, value V) {
-	if len(c.cache) == c.capacity {
+	if uint(len(c.cache)) == c.capacity {
 		c.evict()
 	}
 	c.cache[key] = value

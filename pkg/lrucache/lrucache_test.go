@@ -7,13 +7,20 @@ import (
 )
 
 func TestBasicUsage(t *testing.T) {
-	cache := lrucache.NewLRUCache[int, int](2)
+	_, err := lrucache.NewLRUCache[int, int](0)
+	if err != lrucache.ErrInvalidCapacity {
+		t.Errorf("expected lrucache.ErrInvalidCapacity, but got %#v", err)
+	}
+
+	cache, err := lrucache.NewLRUCache[int, int](2)
+	if err != nil {
+		t.Errorf("failed to create cache, got error: %#v", err)
+	}
 	cache.Put(1, 1)
 	cache.Put(2, 2)
 	cache.Put(3, 3)
 
-	_, err := cache.Get(1)
-	if err != lrucache.ErrKeyNotFound {
+	if _, err = cache.Get(1); err != lrucache.ErrKeyNotFound {
 		t.Errorf("key still exists, but it's not expected")
 	}
 
