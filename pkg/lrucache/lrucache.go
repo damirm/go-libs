@@ -40,9 +40,7 @@ func NewLRUCache[K comparable, V any](capacity uint) (*LRUCache[K, V], error) {
 
 func (c *LRUCache[K, V]) Put(key K, value V) {
 	if ci, ok := c.cache[key]; ok {
-		if c.keys.Front().Value != ci.el {
-			c.keys.MoveToFront(ci.el)
-		}
+		c.keys.MoveToFront(ci.el)
 	} else {
 		el := c.keys.PushFront(key)
 		ci = cachedItem[K, V]{
@@ -59,9 +57,7 @@ func (c *LRUCache[K, V]) Put(key K, value V) {
 
 func (c *LRUCache[K, V]) Get(key K) (V, error) {
 	if ci, ok := c.cache[key]; ok {
-		if ci.el != c.keys.Front() {
-			c.keys.MoveToFront(ci.el)
-		}
+		c.keys.MoveToFront(ci.el)
 		return ci.value, nil
 	}
 	return *new(V), ErrKeyNotFound
