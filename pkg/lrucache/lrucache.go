@@ -72,5 +72,6 @@ func (c *LRUCache[K, V]) evict() {
 	tail := c.keys.Back()
 	if tail != nil {
 		delete(c.cache, tail.Value.(K))
+		c.keys.Remove(tail)
 	}
 }
