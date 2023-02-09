@@ -13,7 +13,8 @@ var (
 type FreqStack[T comparable] struct {
 	maxFreq uint64
 	freqs   map[T]uint64
-	stacks  map[uint64]*linkedlist.LinkedList[T]
+	// TODO: Use container/list instead.
+	stacks map[uint64]*linkedlist.LinkedList[T]
 }
 
 func NewFreqStack[T comparable]() *FreqStack[T] {
@@ -29,7 +30,8 @@ func (s *FreqStack[T]) Push(val T) {
 	if _, ok := s.stacks[freq]; !ok {
 		s.stacks[freq] = linkedlist.NewLinkedList[T]()
 	}
-	s.stacks[freq].Append(val)
+	item := linkedlist.NewItem(val)
+	s.stacks[freq].PushBack(item)
 	if freq > s.maxFreq {
 		s.maxFreq = freq
 	}
@@ -40,7 +42,7 @@ func (s *FreqStack[T]) Pop() (T, error) {
 		return *new(T), ErrEmptyStack
 	}
 	stack := s.stacks[s.maxFreq]
-	val, err := stack.Pop()
+	item, err := stack.PopBack()
 	if err != nil {
 		return *new(T), err
 	}
@@ -48,6 +50,7 @@ func (s *FreqStack[T]) Pop() (T, error) {
 		delete(s.stacks, s.maxFreq)
 		s.maxFreq--
 	}
+	val := item.GetValue()
 	s.freqs[val]--
 	if s.freqs[val] == 0 {
 		delete(s.freqs, val)

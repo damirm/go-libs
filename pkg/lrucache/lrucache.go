@@ -1,19 +1,29 @@
 package lrucache
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/damirm/go-libs/pkg/linkedlist"
+)
 
 var (
 	ErrKeyNotFound     = errors.New("key not found")
 	ErrInvalidCapacity = errors.New("capacity must be > 1")
 )
 
+type cachedItem[K comparable, V any] struct {
+	key   K
+	value V
+	item  *linkedlist.Item[K]
+}
+
 // LRUCache - least recently used cache.
 // Cache keeps most recently used keys,
 // but least recently used can be evicted.
 type LRUCache[K comparable, V any] struct {
 	capacity uint
-	cache    map[K]V
-	usages   map[K]uint
+	values   map[K]cachedItem[K, V]
+	keys     *linkedlist.LinkedList[K]
 }
 
 func NewLRUCache[K comparable, V any](capacity uint) (*LRUCache[K, V], error) {
@@ -22,55 +32,49 @@ func NewLRUCache[K comparable, V any](capacity uint) (*LRUCache[K, V], error) {
 	}
 	return &LRUCache[K, V]{
 		capacity: capacity,
-		cache:    make(map[K]V, capacity),
-		usages:   make(map[K]uint, capacity),
+		values:   make(map[K]cachedItem[K, V]),
+		keys:     linkedlist.NewLinkedList[K](),
 	}, nil
 }
 
-var nowCounter uint
-
-func now() uint {
-	nowCounter++
-	return nowCounter
-}
-
 func (c *LRUCache[K, V]) Put(key K, value V) {
-	if uint(len(c.cache)) == c.capacity {
+	if ci, ok := c.values[key]; ok {
+		if c.keys.Front() != ci.item {
+			c.keys.Remove(ci.item)
+			c.keys.PushFront(ci.item)
+		}
+	} else {
+		item := linkedlist.NewItem(key)
+		ci = cachedItem[K, V]{
+			key:   key,
+			value: value,
+			item:  item,
+		}
+		c.values[key] = ci
+		c.keys.PushFront(item)
+	}
+	if uint(c.keys.Len()) > c.capacity {
 		c.evict()
 	}
-	c.cache[key] = value
-	c.usages[key] = now()
 }
 
 func (c *LRUCache[K, V]) Get(key K) (V, error) {
-	val, ok := c.cache[key]
-	if !ok {
-		return *new(V), ErrKeyNotFound
+	if ci, ok := c.values[key]; ok {
+		c.keys.Remove(ci.item)
+		c.keys.PushFront(ci.item)
+		return ci.value, nil
 	}
-	c.usages[key] = now()
-	return val, nil
+	return *new(V), ErrKeyNotFound
 }
 
 func (c *LRUCache[K, V]) Clear() {
-	c.cache = make(map[K]V, c.capacity)
-	c.usages = make(map[K]uint, c.capacity)
+	c.values = make(map[K]cachedItem[K, V])
+	c.keys.Clear()
 }
 
-// TODO: How to speedup eviction of least recently used keys?
 func (c *LRUCache[K, V]) evict() {
-	var oldest = c.firstUsageKey()
-	for k, n := range c.usages {
-		if n < c.usages[oldest] {
-			oldest = k
-		}
+	k, _ := c.keys.PopBack()
+	if k != nil {
+		delete(c.values, k.GetValue())
 	}
-	delete(c.usages, oldest)
-	delete(c.cache, oldest)
-}
-
-func (c *LRUCache[K, V]) firstUsageKey() K {
-	for k := range c.usages {
-		return k
-	}
-	panic("usages is empty")
 }
