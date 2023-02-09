@@ -1,9 +1,8 @@
 package lrucache
 
 import (
+	"container/list"
 	"errors"
-
-	"github.com/damirm/go-libs/pkg/linkedlist"
 )
 
 var (
@@ -14,7 +13,7 @@ var (
 type cachedItem[K comparable, V any] struct {
 	key   K
 	value V
-	item  *linkedlist.Item[K]
+	el    *list.Element
 }
 
 // LRUCache - least recently used cache.
@@ -22,8 +21,10 @@ type cachedItem[K comparable, V any] struct {
 // but least recently used can be evicted.
 type LRUCache[K comparable, V any] struct {
 	capacity uint
-	values   map[K]cachedItem[K, V]
-	keys     *linkedlist.LinkedList[K]
+	cache    map[K]cachedItem[K, V]
+
+	// least recently used keys always in front of list.
+	keys *list.List
 }
 
 func NewLRUCache[K comparable, V any](capacity uint) (*LRUCache[K, V], error) {
@@ -32,49 +33,48 @@ func NewLRUCache[K comparable, V any](capacity uint) (*LRUCache[K, V], error) {
 	}
 	return &LRUCache[K, V]{
 		capacity: capacity,
-		values:   make(map[K]cachedItem[K, V]),
-		keys:     linkedlist.NewLinkedList[K](),
+		cache:    make(map[K]cachedItem[K, V]),
+		keys:     list.New(),
 	}, nil
 }
 
 func (c *LRUCache[K, V]) Put(key K, value V) {
-	if ci, ok := c.values[key]; ok {
-		if c.keys.Front() != ci.item {
-			c.keys.Remove(ci.item)
-			c.keys.PushFront(ci.item)
+	if ci, ok := c.cache[key]; ok {
+		if c.keys.Front().Value != ci.el {
+			c.keys.MoveToFront(ci.el)
 		}
 	} else {
-		item := linkedlist.NewItem(key)
+		el := c.keys.PushFront(key)
 		ci = cachedItem[K, V]{
 			key:   key,
 			value: value,
-			item:  item,
+			el:    el,
 		}
-		c.values[key] = ci
-		c.keys.PushFront(item)
-	}
-	if uint(c.keys.Len()) > c.capacity {
-		c.evict()
+		c.cache[key] = ci
+		if uint(c.keys.Len()) > c.capacity {
+			c.evict()
+		}
 	}
 }
 
 func (c *LRUCache[K, V]) Get(key K) (V, error) {
-	if ci, ok := c.values[key]; ok {
-		c.keys.Remove(ci.item)
-		c.keys.PushFront(ci.item)
+	if ci, ok := c.cache[key]; ok {
+		if ci.el != c.keys.Front() {
+			c.keys.MoveToFront(ci.el)
+		}
 		return ci.value, nil
 	}
 	return *new(V), ErrKeyNotFound
 }
 
 func (c *LRUCache[K, V]) Clear() {
-	c.values = make(map[K]cachedItem[K, V])
-	c.keys.Clear()
+	c.cache = make(map[K]cachedItem[K, V])
+	c.keys.Init()
 }
 
 func (c *LRUCache[K, V]) evict() {
-	k, _ := c.keys.PopBack()
-	if k != nil {
-		delete(c.values, k.GetValue())
+	tail := c.keys.Back()
+	if tail != nil {
+		delete(c.cache, tail.Value.(K))
 	}
 }
