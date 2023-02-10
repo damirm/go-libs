@@ -21,7 +21,7 @@ type cachedItem[K comparable, V any] struct {
 // but least recently used can be evicted.
 type LRUCache[K comparable, V any] struct {
 	capacity uint
-	cache    map[K]cachedItem[K, V]
+	cache    map[K]*cachedItem[K, V]
 
 	// least recently used keys always in front of list.
 	keys *list.List
@@ -33,7 +33,7 @@ func NewLRUCache[K comparable, V any](capacity uint) (*LRUCache[K, V], error) {
 	}
 	return &LRUCache[K, V]{
 		capacity: capacity,
-		cache:    make(map[K]cachedItem[K, V]),
+		cache:    make(map[K]*cachedItem[K, V]),
 		keys:     list.New(),
 	}, nil
 }
@@ -41,9 +41,10 @@ func NewLRUCache[K comparable, V any](capacity uint) (*LRUCache[K, V], error) {
 func (c *LRUCache[K, V]) Put(key K, value V) {
 	if ci, ok := c.cache[key]; ok {
 		c.keys.MoveToFront(ci.el)
+		ci.value = value
 	} else {
 		el := c.keys.PushFront(key)
-		ci = cachedItem[K, V]{
+		ci = &cachedItem[K, V]{
 			key:   key,
 			value: value,
 			el:    el,
@@ -64,7 +65,7 @@ func (c *LRUCache[K, V]) Get(key K) (V, error) {
 }
 
 func (c *LRUCache[K, V]) Clear() {
-	c.cache = make(map[K]cachedItem[K, V])
+	c.cache = make(map[K]*cachedItem[K, V])
 	c.keys.Init()
 }
 
